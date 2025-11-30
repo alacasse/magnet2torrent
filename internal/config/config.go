@@ -11,9 +11,12 @@ import (
 
 // Config captures user-adjustable settings.
 type Config struct {
-	SaveDir  string `json:"saveDir"`
-	LogLevel string `json:"logLevel"`
-	AppName  string `json:"appName"`
+	SaveDir    string `json:"saveDir"`
+	LogLevel   string `json:"logLevel"`
+	AppName    string `json:"appName"`
+	QbUsername string `json:"qbUsername"`
+	QbPassword string `json:"qbPassword"`
+	QbHost     string `json:"qbHost"`
 }
 
 // DefaultConfig returns a config populated with sensible defaults.

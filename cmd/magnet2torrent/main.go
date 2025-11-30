@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"magnet2torrent/internal/config"
 	"magnet2torrent/internal/logging"
+	"magnet2torrent/internal/qbclient"
 )
 
 const version = "0.1.0"
@@ -53,6 +55,10 @@ func main() {
 	magnet := "<none provided>"
 	if len(args) > 0 {
 		magnet = args[0]
+		if err := processMagnet(magnet, cfg, logger); err != nil {
+			logger.Errorf("failed to process magnet: %v", err)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("magnet2torrent wired and running\n")
@@ -62,4 +68,45 @@ func main() {
 	fmt.Printf("  save dir    : %s\n", cfg.SaveDir)
 	fmt.Printf("  log level   : %s\n", cfg.LogLevel)
 	fmt.Printf("  magnet arg  : %s\n", magnet)
+}
+
+type qbClient interface {
+	Login() error
+	AddMagnet(string) error
+}
+
+var qbClientFactory = func(cfg *config.Config) qbClient {
+	return qbclient.New(cfg.QbHost, cfg.QbUsername, cfg.QbPassword)
+}
+
+func processMagnet(magnetLink string, cfg *config.Config, logger *logging.Logger) error {
+	if err := validateQBConfig(cfg); err != nil {
+		return err
+	}
+
+	qb := qbClientFactory(cfg)
+
+	if err := qb.Login(); err != nil {
+		return fmt.Errorf("qbittorrent login failed: %w", err)
+	}
+
+	if err := qb.AddMagnet(magnetLink); err != nil {
+		return fmt.Errorf("could not send magnet to qbittorrent: %w", err)
+	}
+
+	logger.Infof("magnet forwarded to qBittorrent at %s", cfg.QbHost)
+	return nil
+}
+
+func validateQBConfig(cfg *config.Config) error {
+	if cfg.QbHost == "" {
+		return errors.New("qbittorrent host is empty; set qbHost in config")
+	}
+	if cfg.QbUsername == "" {
+		return errors.New("qbittorrent username is empty; set qbUsername in config")
+	}
+	if cfg.QbPassword == "" {
+		return errors.New("qbittorrent password is empty; set qbPassword in config")
+	}
+	return nil
 }
