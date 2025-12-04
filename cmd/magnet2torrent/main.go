@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"magnet2torrent/internal/config"
 	"magnet2torrent/internal/logging"
@@ -47,8 +49,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if usedDefaults {
-		logger.Infof("config not found at %s; using defaults", configPath)
+	if usedDefaults || needsQBConfig(cfg) {
+		if !isInteractive() {
+			logger.Errorf("config missing and no TTY available; create %s manually with qbHost/qbUsername/qbPassword", configPath)
+			os.Exit(1)
+		}
+		if err := promptAndSaveConfig(configPath, cfg, logger); err != nil {
+			logger.Errorf("failed to save config: %v", err)
+			os.Exit(1)
+		}
 	}
 
 	args := flag.Args()
@@ -109,4 +118,49 @@ func validateQBConfig(cfg *config.Config) error {
 		return errors.New("qbittorrent password is empty; set qbPassword in config")
 	}
 	return nil
+}
+
+func needsQBConfig(cfg *config.Config) bool {
+	return cfg.QbHost == "" || cfg.QbUsername == "" || cfg.QbPassword == ""
+}
+
+func promptAndSaveConfig(configPath string, cfg *config.Config, logger *logging.Logger) error {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("Config not found or incomplete. Please provide qBittorrent settings.\n")
+	cfg.QbHost = promptValue(reader, "qBittorrent host (e.g. http://localhost:8080)", cfg.QbHost)
+	cfg.QbUsername = promptValue(reader, "qBittorrent username", cfg.QbUsername)
+	cfg.QbPassword = promptValue(reader, "qBittorrent password", cfg.QbPassword)
+
+	if err := validateQBConfig(cfg); err != nil {
+		return err
+	}
+
+	if err := config.SaveConfig(configPath, cfg); err != nil {
+		return err
+	}
+
+	logger.Infof("config written to %s", configPath)
+	return nil
+}
+
+func promptValue(reader *bufio.Reader, label string, defaultVal string) string {
+	if defaultVal != "" {
+		fmt.Printf("%s [%s]: ", label, defaultVal)
+	} else {
+		fmt.Printf("%s: ", label)
+	}
+	text, _ := reader.ReadString('\n')
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return defaultVal
+	}
+	return text
+}
+
+func isInteractive() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (info.Mode() & os.ModeCharDevice) != 0
 }

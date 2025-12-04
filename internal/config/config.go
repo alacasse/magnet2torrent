@@ -78,3 +78,21 @@ func defaultSaveDir(home string) string {
 	}
 	return filepath.Join(home, "Downloads", "magnet2torrent")
 }
+
+// SaveConfig writes the config JSON to the given path, creating parent dirs.
+func SaveConfig(path string, cfg *Config) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create config dir %s: %w", dir, err)
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("write config %s: %w", path, err)
+	}
+	return nil
+}

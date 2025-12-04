@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -18,6 +20,7 @@ type Client struct {
 	username string
 	password string
 	client   *http.Client
+	logger   *log.Logger
 }
 
 // New builds a client with an internal HTTP client and cookie jar.
@@ -28,6 +31,7 @@ func New(host, username, password string) *Client {
 		username: username,
 		password: password,
 		client:   &http.Client{Jar: jar},
+		logger:   log.New(os.Stdout, "qbclient: ", log.LstdFlags),
 	}
 }
 
@@ -38,6 +42,7 @@ func NewWithClient(host, username, password string, httpClient *http.Client) *Cl
 		username: username,
 		password: password,
 		client:   httpClient,
+		logger:   log.New(os.Stdout, "qbclient: ", log.LstdFlags),
 	}
 }
 
@@ -53,14 +58,18 @@ func (c *Client) Login() error {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	c.logf("Login request: %s %s body=%s", req.Method, req.URL.String(), form.Encode())
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+	c.logf("Login response: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("login failed: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
@@ -94,16 +103,26 @@ func (c *Client) AddMagnet(magnet string) error {
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
+	c.logf("AddMagnet request: %s %s magnet=%s", req.Method, req.URL.String(), magnet)
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+	c.logf("AddMagnet response: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("qBittorrent error: %s", strings.TrimSpace(string(body)))
 	}
 
 	return nil
+}
+
+func (c *Client) logf(format string, args ...any) {
+	if c.logger != nil {
+		c.logger.Printf(format, args...)
+	}
 }

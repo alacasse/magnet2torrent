@@ -46,3 +46,34 @@ func TestDefaultConfigPath(t *testing.T) {
 		})
 	}
 }
+
+func TestSaveConfigRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "magnet2torrent", "config.json")
+
+	cfg := &Config{
+		SaveDir:    "/tmp/downloads",
+		LogLevel:   "debug",
+		AppName:    "magnet2torrent",
+		QbUsername: "alice",
+		QbPassword: "secret",
+		QbHost:     "http://localhost:8080",
+	}
+
+	if err := SaveConfig(path, cfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
+	}
+
+	loaded, usedDefault, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig error: %v", err)
+	}
+	if usedDefault {
+		t.Fatalf("expected usedDefault=false, got true")
+	}
+	if loaded.QbUsername != "alice" || loaded.QbPassword != "secret" || loaded.QbHost != "http://localhost:8080" {
+		t.Fatalf("loaded config mismatch: %+v", loaded)
+	}
+}
