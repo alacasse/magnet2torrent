@@ -8,6 +8,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:-${VERSION:-}}"
+REPO_OWNER="${REPO_OWNER:-alacasse}"
+REPO_NAME="${REPO_NAME:-magnet2torrent}"
 
 if [[ -z "$VERSION" ]]; then
   echo "Usage: $0 <version>" >&2
@@ -86,7 +88,7 @@ This tarball packages the magnet2torrent CLI for npm installation.
 ## Installation
 
 \`\`\`bash
-npm install -g https://github.com/you/repo/releases/download/v$VERSION/magnet2torrent-$VERSION.tgz
+npm install -g https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/v$VERSION/magnet2torrent-$VERSION.tgz
 \`\`\`
 EOF
 
@@ -97,4 +99,4 @@ popd >/dev/null
 mv "$ROOT/$tarball_name" "$DIST_DIR/"
 
 echo "Created npm package: $DIST_DIR/$tarball_name"
-echo "Upload this tarball to a GitHub Release at: https://github.com/you/repo/releases/tag/v$VERSION"
+echo "Upload this tarball to a GitHub Release at: https://github.com/$REPO_OWNER/$REPO_NAME/releases/tag/v$VERSION"
