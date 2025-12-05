@@ -1,20 +1,22 @@
-# Magnet Link Handler (Linux)
+# Magnet Link Handler
 
-This app can register itself as the handler for `magnet:` links on Linux desktops (GNOME, KDE/Plasma, XFCE, Cinnamon, etc.) by installing a desktop entry and telling `xdg-mime` to route the protocol to `magnet2torrent`.
+The app can register itself as the handler for `magnet:` links.
 
-## Register
+## Linux
 
-After installing the CLI, run:
+Desktops (GNOME, KDE/Plasma, XFCE, Cinnamon, etc.) rely on a desktop entry plus `xdg-mime`.
+
+**Register**
 
 ```bash
 scripts/register-magnet-linux.sh
 ```
 
-By default this writes `~/.local/share/applications/magnet2torrent.desktop`, then runs `xdg-mime default magnet2torrent.desktop x-scheme-handler/magnet` and `update-desktop-database ~/.local/share/applications` when available. Use `DRY_RUN=1` to preview changes.
+This writes `~/.local/share/applications/magnet2torrent.desktop`, then runs `xdg-mime default magnet2torrent.desktop x-scheme-handler/magnet` and `update-desktop-database ~/.local/share/applications` when available. Use `DRY_RUN=1` to preview changes.
 
 The installer (`scripts/install.sh`) calls the register script automatically on Linux. Set `REGISTER_MAGNET=0` to skip.
 
-## Unregister
+**Unregister**
 
 ```bash
 xdg-mime default '' x-scheme-handler/magnet && \
@@ -23,3 +25,25 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 ```
 
 You may need to reselect a different app in your browser after removing the handler.
+
+## Windows
+
+Windows uses per-user registry keys under `HKCU:\Software\Classes\magnet`.
+
+**Register**
+
+```powershell
+pwsh scripts/register-magnet-windows.ps1
+```
+
+This sets the magnet protocol command to the `magnet2torrent` binary for the current user. Use `-DryRun` to preview changes. The Windows installer (`scripts/install.ps1`) invokes this automatically unless `REGISTER_MAGNET=0` or `-RegisterMagnet:$false` is provided.
+
+If Windows prompts for a handler after registration, open Settings → Apps → Default apps → Choose defaults by link type, search for `magnet`, and pick `magnet2torrent`.
+
+**Unregister**
+
+```powershell
+Remove-Item -Path HKCU:\Software\Classes\magnet -Recurse -Force
+```
+
+You may need to reassign magnet links to another app in Default apps afterward.

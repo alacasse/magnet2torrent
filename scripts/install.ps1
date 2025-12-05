@@ -7,14 +7,20 @@ param(
   [string] $RepoName = $env:REPO_NAME,
   [string] $Version = $env:VERSION,
   [string] $Prefix = $env:PREFIX,
-  [switch] $DryRun
+  [switch] $DryRun,
+  [bool] $RegisterMagnet = $true
 )
 
 if (-not $RepoOwner) { $RepoOwner = "alacasse" }
 if (-not $RepoName) { $RepoName = "magnet2torrent" }
+if ($env:REGISTER_MAGNET) { $RegisterMagnet = -not ($env:REGISTER_MAGNET -eq "0") }
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 function Usage {
-  Write-Host "Usage: pwsh scripts/install.ps1 -RepoOwner you -RepoName repo -Version 0.1.0 [-Prefix C:\path\to\npm] [-DryRun]"
+  Write-Host "Usage: pwsh scripts/install.ps1 -RepoOwner you -RepoName repo -Version 0.1.0 [-Prefix C:\path\to\npm] [-DryRun] [-RegisterMagnet \$true|\$false]"
+  Write-Host ""
+  Write-Host "Env vars: REGISTER_MAGNET=0 to skip magnet handler registration"
 }
 
 function Ensure-Version {
@@ -44,6 +50,24 @@ function Pre-InstallConfig {
   # Hook for future interactive config collection.
 }
 
+function Register-MagnetWindows {
+  if (-not $RegisterMagnet) {
+    Write-Host "Skipping magnet handler registration (RegisterMagnet=$RegisterMagnet)."
+    return
+  }
+
+  $registerScript = Join-Path $ScriptDir "register-magnet-windows.ps1"
+  if (-not (Test-Path $registerScript)) {
+    Write-Warning "Registration script not found at $registerScript"
+    return
+  }
+
+  Write-Host "Registering magnet handler..."
+  $cmd = "pwsh `"$registerScript`""
+  if ($DryRun) { $cmd += " -DryRun" }
+  Run $cmd
+}
+
 function Install-Windows {
   param([string] $Url, [string] $MaybePrefix)
   Write-Host "Installing magnet2torrent $Version for Windows (npm global)..."
@@ -52,6 +76,7 @@ function Install-Windows {
   } else {
     Run "npm install -g `"$Url`""
   }
+  Register-MagnetWindows
 }
 
 function Post-InstallMessage {
@@ -59,6 +84,9 @@ function Post-InstallMessage {
   Write-Host "magnet2torrent installed. Verify with: magnet2torrent --help"
   if ($MaybePrefix) {
     Write-Host "If not on PATH, add: setx PATH `"$MaybePrefix\bin;%PATH%`""
+  }
+  if (-not $RegisterMagnet) {
+    Write-Host "Magnet handler registration skipped. Run scripts/register-magnet-windows.ps1 later if needed."
   }
 }
 
