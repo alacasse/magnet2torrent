@@ -10,6 +10,8 @@ REPO_NAME="${REPO_NAME:-magnet2torrent}"
 VERSION="${VERSION:-}"
 PREFIX="${PREFIX:-}"
 DRY_RUN="${DRY_RUN:-0}"
+REGISTER_MAGNET="${REGISTER_MAGNET:-1}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<EOF
@@ -21,6 +23,7 @@ Env vars:
   VERSION      Release version without v prefix (required)
   PREFIX       npm prefix to install under (optional)
   DRY_RUN      Set to 1 to print actions without executing
+  REGISTER_MAGNET Set to 0 to skip magnet handler registration on Linux
 EOF
 }
 
@@ -49,6 +52,19 @@ pre_install_config() {
   :
 }
 
+register_magnet_linux() {
+  if [[ "$REGISTER_MAGNET" != "1" ]]; then
+    echo "Skipping magnet handler registration (REGISTER_MAGNET=$REGISTER_MAGNET)"
+    return
+  fi
+  if [[ ! -x "$SCRIPT_DIR/register-magnet-linux.sh" ]]; then
+    echo "Registration script not found at $SCRIPT_DIR/register-magnet-linux.sh" >&2
+    return
+  fi
+  echo "Registering magnet handler..."
+  run "DRY_RUN=\"$DRY_RUN\" \"$SCRIPT_DIR/register-magnet-linux.sh\""
+}
+
 install_linux() {
   local url
   url="$(tarball_url)"
@@ -58,6 +74,7 @@ install_linux() {
   else
     run "npm install -g \"$url\""
   fi
+  register_magnet_linux
 }
 
 install_macos() {
@@ -75,6 +92,9 @@ post_install_message() {
   echo "magnet2torrent installed. Verify with: magnet2torrent --help"
   if [[ -n "$PREFIX" ]]; then
     echo "If not on PATH, add: export PATH=\"$PREFIX/bin:\$PATH\""
+  fi
+  if [[ "$(uname -s)" == "Linux" && "$REGISTER_MAGNET" != "1" ]]; then
+    echo "Magnet handler registration skipped (REGISTER_MAGNET=$REGISTER_MAGNET). Run scripts/register-magnet-linux.sh later if needed."
   fi
 }
 
