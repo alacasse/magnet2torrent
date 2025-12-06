@@ -14,7 +14,7 @@ scripts/register-magnet-linux.sh
 
 This writes `~/.local/share/applications/magnet2torrent.desktop`, then runs `xdg-mime default magnet2torrent.desktop x-scheme-handler/magnet` and `update-desktop-database ~/.local/share/applications` when available. Use `DRY_RUN=1` to preview changes.
 
-The installer (`scripts/install.sh`) calls the register script automatically on Linux. Set `REGISTER_MAGNET=0` to skip.
+The installer (`scripts/install.sh`) and the npm package postinstall call the register script automatically on Linux. Set `REGISTER_MAGNET=0` to skip.
 
 **Unregister**
 
@@ -36,7 +36,7 @@ Windows uses per-user registry keys under `HKCU:\Software\Classes\magnet`.
 pwsh scripts/register-magnet-windows.ps1
 ```
 
-This sets the magnet protocol command to the `magnet2torrent` binary for the current user. Use `-DryRun` to preview changes. The Windows installer (`scripts/install.ps1`) invokes this automatically unless `REGISTER_MAGNET=0` or `-RegisterMagnet:$false` is provided.
+This sets the magnet protocol command to the `magnet2torrent` binary for the current user. Use `-DryRun` to preview changes. The Windows installer (`scripts/install.ps1`) and the npm package postinstall invoke this automatically unless `REGISTER_MAGNET=0` or `-RegisterMagnet:$false` is provided.
 
 If Windows prompts for a handler after registration, open Settings → Apps → Default apps → Choose defaults by link type, search for `magnet`, and pick `magnet2torrent`.
 

@@ -40,14 +40,14 @@ func main() {
 		return
 	}
 
-	logger := logging.NewLogger("info")
-
 	configPath := filepath.Clean(*configPathFlag)
 	cfg, usedDefaults, err := config.LoadConfig(configPath)
 	if err != nil {
-		logger.Errorf("failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 		os.Exit(1)
 	}
+
+	logger := logging.NewLogger(cfg.LogLevel, cfg.LogFile)
 
 	if usedDefaults || needsQBConfig(cfg) {
 		if !isInteractive() {
@@ -76,6 +76,7 @@ func main() {
 	fmt.Printf("  used defaults: %t\n", usedDefaults)
 	fmt.Printf("  save dir    : %s\n", cfg.SaveDir)
 	fmt.Printf("  log level   : %s\n", cfg.LogLevel)
+	fmt.Printf("  log file    : %s\n", cfg.LogFile)
 	fmt.Printf("  magnet arg  : %s\n", magnet)
 }
 

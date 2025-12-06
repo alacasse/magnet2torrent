@@ -13,6 +13,7 @@ import (
 type Config struct {
 	SaveDir    string `json:"saveDir"`
 	LogLevel   string `json:"logLevel"`
+	LogFile    string `json:"logFile"`
 	AppName    string `json:"appName"`
 	QbUsername string `json:"qbUsername"`
 	QbPassword string `json:"qbPassword"`
@@ -56,6 +57,7 @@ func defaultConfig(home string) *Config {
 	return &Config{
 		SaveDir:  defaultSaveDir(home),
 		LogLevel: "info",
+		LogFile:  defaultLogFile(runtime.GOOS, home, os.Getenv("LOCALAPPDATA"), os.Getenv("XDG_CACHE_HOME")),
 		AppName:  "magnet2torrent",
 	}
 }
@@ -77,6 +79,21 @@ func defaultSaveDir(home string) string {
 		return "magnet2torrent-downloads"
 	}
 	return filepath.Join(home, "Downloads", "magnet2torrent")
+}
+
+func defaultLogFile(goos string, home string, localAppData string, xdgCache string) string {
+	if goos == "windows" {
+		base := localAppData
+		if base == "" {
+			base = filepath.Join(home, "AppData", "Local")
+		}
+		return filepath.Join(base, "magnet2torrent", "magnet2torrent.log")
+	}
+
+	if xdgCache != "" {
+		return filepath.Join(xdgCache, "magnet2torrent", "magnet2torrent.log")
+	}
+	return filepath.Join(home, ".cache", "magnet2torrent", "magnet2torrent.log")
 }
 
 // SaveConfig writes the config JSON to the given path, creating parent dirs.
